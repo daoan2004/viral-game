@@ -224,15 +224,17 @@ async def health_check():
         "DEEPSEEK_API_KEY": bool(os.getenv("DEEPSEEK_API_KEY")),
     }
     
-    # Kiểm tra Firebase
-    firebase_ok = False
+    # Kiểm tra Database (SQLite)
+    db_ok = False
     try:
-        from firebase_service import db
-        firebase_ok = db is not None
+        from database import engine
+        # Try to connect
+        with engine.connect() as connection:
+            db_ok = True
     except Exception:
         pass
     
-    env_checks["FIREBASE"] = firebase_ok
+    env_checks["DATABASE"] = db_ok
 
     all_ok = all(env_checks.values())
 

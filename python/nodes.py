@@ -23,7 +23,8 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from state import InvoiceState
-from firebase_service import TenantService, InvoiceService
+from state import InvoiceState
+from services import TenantService, InvoiceService
 
 # ============================================================================
 # LAZY IMPORT PYTESSERACT

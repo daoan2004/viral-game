@@ -16,12 +16,8 @@ services:
       # Point to the internal docker alias of the AI service
       - AI_SERVICE_URL=http://ai_service:8080
       - NODE_ENV=production
-    depends_on:
-      - ai_service
-    networks:
-      - viral_network
     volumes:
-      - ./config:/usr/src/app/config
+      - ./data:/usr/src/app/data
 
   ai_service:
     build:
@@ -36,9 +32,9 @@ services:
       # Override config for docker network
       - PORT=8080
       - HOST=0.0.0.0
-      - FIREBASE_KEY_PATH=/app/config/firebase-key.json
+      - DATABASE_PATH=/app/data/viral_game.sqlite
     volumes:
-      - ./config:/app/config
+      - ./data:/app/data
     networks:
       - viral_network
 

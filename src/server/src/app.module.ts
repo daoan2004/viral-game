@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
 
-import { FirebaseModule } from './firebase/firebase.module';
 import { PagesModule } from './pages/pages.module';
 import { StatsModule } from './stats/stats.module';
 import { SpaController } from './spa.controller';
+import { Tenant } from './pages/tenant.entity';
 
 @Module({
   imports: [
@@ -20,7 +21,12 @@ import { SpaController } from './spa.controller';
         fallthrough: true,
       },
     }),
-    FirebaseModule,
+    TypeOrmModule.forRoot({
+      type: 'sqlite',
+      database: process.env.DATABASE_PATH || '/usr/src/app/data/viral_game.sqlite',
+      entities: [Tenant],
+      synchronize: true, // Auto-create tables (Dev/Simple Prod)
+    }),
     PagesModule,
     StatsModule,
   ],

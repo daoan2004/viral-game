@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { PagesController } from './pages.controller';
 import { PagesService } from './pages.service';
-import { FirebaseModule } from '../firebase/firebase.module';
+import { Tenant } from './tenant.entity';
 
 @Module({
-  imports: [FirebaseModule],
+  imports: [TypeOrmModule.forFeature([Tenant])],
   controllers: [PagesController],
   providers: [PagesService],
 })
