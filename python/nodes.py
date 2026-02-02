@@ -595,7 +595,21 @@ def send_message_node(state: InvoiceState) -> Dict[str, Any]:
 
         return {}
 
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
         error_msg = f"Lỗi khi gửi tin nhắn Facebook: {str(e)}"
+        
+        # Log chi tiết FB error body nếu có
+        if e.response is not None:
+             try:
+                 fb_error = e.response.json()
+                 print(f"❌ [Send Message Node] FB Error Body: {json.dumps(fb_error, indent=2)}")
+             except:
+                 print(f"❌ [Send Message Node] FB Error Text: {e.response.text}")
+                 
+        print(f"❌ [Send Message Node] {error_msg}")
+        return {"error": error_msg}
+        
+    except Exception as e:
+        error_msg = f"Lỗi không xác định: {str(e)}"
         print(f"❌ [Send Message Node] {error_msg}")
         return {"error": error_msg}
