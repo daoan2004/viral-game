@@ -25,8 +25,8 @@ call venv\Scripts\activate.bat
 
 REM Chạy FastAPI server
 echo Starting FastAPI server...
-echo Server URL: http://localhost:8000
-echo Health check: http://localhost:8000/health
+echo Server URL: http://localhost:8080
+echo Health check: http://localhost:8080/health
 echo.
 echo Nhan Ctrl+C de dung server
 echo ================================================

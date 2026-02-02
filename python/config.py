@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
+        extra = "ignore"
     
     def validate_required_settings(self) -> tuple[bool, list[str]]:
         """

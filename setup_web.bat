@@ -35,6 +35,15 @@ if errorlevel 1 (
 cd ..\..
 echo.
 
+echo [3/3] Checking Database directory...
+if not exist "data" (
+    mkdir data
+    echo Created 'data' directory for SQLite database.
+) else (
+    echo 'data' directory already exists.
+)
+echo.
+
 echo ================================================
 echo Web Setup Completed!
 echo ================================================
