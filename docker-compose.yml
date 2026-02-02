@@ -20,6 +20,8 @@ services:
       - ai_service
     networks:
       - viral_network
+    volumes:
+      - ./config:/usr/src/app/config
 
   ai_service:
     build:
