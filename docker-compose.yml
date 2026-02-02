@@ -17,6 +17,9 @@ services:
       - AI_SERVICE_URL=http://ai_service:8080
       - NODE_ENV=production
       - DATABASE_PATH=/usr/src/app/data/viral_game.sqlite
+      # Facebook webhook verification
+      - FB_VERIFY_TOKEN=${FB_VERIFY_TOKEN}
+      - FB_PAGE_ACCESS_TOKEN=${FB_PAGE_ACCESS_TOKEN}
     volumes:
       - ./data:/usr/src/app/data
 
