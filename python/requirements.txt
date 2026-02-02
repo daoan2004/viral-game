@@ -1,0 +1,27 @@
+# FastAPI và dependencies
+fastapi
+uvicorn[standard]
+python-multipart
+
+# LangChain và LangGraph
+langchain
+langchain-openai
+langgraph
+
+# Xử lý ảnh và OCR
+pytesseract
+Pillow
+
+# HTTP requests
+requests
+httpx
+
+# Environment variables
+python-dotenv
+
+# Pydantic cho validation
+pydantic
+pydantic-settings
+
+# Firebase
+firebase-admin

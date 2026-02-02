@@ -1,0 +1,33 @@
+# Dependencies
+node_modules
+**/node_modules
+venv
+**/venv
+__pycache__
+**/__pycache__
+
+# Git
+.git
+.gitignore
+
+# Env (secrets should not be in image unless intentional via args, but env_file handles it)
+.env
+.env.*
+
+# Build outputs
+dist
+*/dist
+build
+*/build
+
+# IDE
+.vscode
+.idea
+
+# Logs
+*.log
+npm-debug.log*
+
+# Docker
+docker-compose.yml
+.dockerignore

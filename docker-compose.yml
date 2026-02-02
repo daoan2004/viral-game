@@ -1,0 +1,44 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: src/server/Dockerfile
+    container_name: viral_game_app
+    restart: always
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      - PORT=3000
+      - APP_PORT=3000
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      # Point to the internal docker alias of the AI service
+      - AI_SERVICE_URL=http://ai_service:8080
+      - NODE_ENV=production
+    depends_on:
+      - ai_service
+    networks:
+      - viral_network
+
+  ai_service:
+    build:
+      context: ./python
+      dockerfile: Dockerfile
+    container_name: viral_game_ai
+    restart: always
+    ports:
+      - "${PORT:-8080}:8080"
+    env_file:
+      - .env
+    environment:
+      # Override config for docker network
+      - PORT=8080
+      - HOST=0.0.0.0
+      - FIREBASE_KEY_PATH=/app/config/firebase-key.json
+    volumes:
+      - ./config:/app/config
+    networks:
+      - viral_network
+
+networks:
+  viral_network:
+    driver: bridge

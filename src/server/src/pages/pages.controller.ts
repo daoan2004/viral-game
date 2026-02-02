@@ -1,0 +1,62 @@
+import { Controller, Get, Post, Put, Delete, Param, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { PagesService } from './pages.service';
+
+@ApiTags('pages')
+@Controller('pages')
+export class PagesController {
+  constructor(private readonly pagesService: PagesService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Get all pages' })
+  @ApiResponse({ status: 200, description: 'Return all Facebook Pages' })
+  async findAll() {
+    const pages = await this.pagesService.findAll();
+    return { pages };
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get page by ID' })
+  @ApiResponse({ status: 200, description: 'Return page by ID' })
+  @ApiResponse({ status: 404, description: 'Page not found' })
+  async findOne(@Param('id') id: string) {
+    try {
+      const page = await this.pagesService.findOne(id);
+      return page;
+    } catch (error) {
+      throw new Error('Page not found');
+    }
+  }
+
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create new page' })
+  @ApiResponse({ status: 201, description: 'Page created successfully' })
+  async create(@Body() createPageDto: any) {
+    return this.pagesService.create(createPageDto);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: 'Update page configuration' })
+  @ApiResponse({ status: 200, description: 'Page updated successfully' })
+  @ApiResponse({ status: 404, description: 'Page not found' })
+  async update(@Param('id') id: string, @Body() updatePageDto: any) {
+    try {
+      return await this.pagesService.update(id, updatePageDto);
+    } catch (error) {
+      throw new Error('Page not found');
+    }
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete page' })
+  @ApiResponse({ status: 204, description: 'Page deleted successfully' })
+  async remove(@Param('id') id: string) {
+    try {
+      await this.pagesService.remove(id);
+    } catch (error) {
+      throw new Error('Page not found');
+    }
+  }
+}
