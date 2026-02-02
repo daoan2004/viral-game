@@ -25,6 +25,7 @@ export class PagesService {
   async create(createPageDto: any) {
     const newTenant = this.tenantRepository.create({
       ...createPageDto,
+      shop_name: createPageDto.shop_name || createPageDto.name, // Map frontend 'name' to entity 'shop_name'
       is_active: true,
       totalSpins: 0,
       totalPrizes: 0,

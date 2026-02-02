@@ -13,6 +13,7 @@ import { Tenant } from './pages/tenant.entity';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: ['../../.env', '.env'],
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public'),

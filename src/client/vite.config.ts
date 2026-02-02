@@ -5,6 +5,7 @@ import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
+  envDir: '../../',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
@@ -12,6 +13,7 @@ export default defineConfig({
     },
   },
   server: {
+    allowedHosts: ['proximally-pantomimic-jennefer.ngrok-free.dev'],
     port: 3000,
     proxy: {
       '/api': {

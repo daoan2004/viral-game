@@ -16,6 +16,7 @@ services:
       # Point to the internal docker alias of the AI service
       - AI_SERVICE_URL=http://ai_service:8080
       - NODE_ENV=production
+      - DATABASE_PATH=/usr/src/app/data/viral_game.sqlite
     volumes:
       - ./data:/usr/src/app/data
 

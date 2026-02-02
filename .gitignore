@@ -108,6 +108,13 @@ pnpm-lock.yaml
 .ruff_cache/
 __pycache__/
 
+
 # AI model caches
 *.ai-cache
 .model-cache
+
+# Database config
+*.sqlite
+*.sqlite3
+*.db
+data/
