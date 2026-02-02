@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import { motion } from 'motion/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,6 +12,7 @@ declare global {
       login: (callback: (response: FBLoginResponse) => void, options: { scope: string }) => void
       api: (path: string, callback: (response: FBApiResponse) => void) => void
     }
+    fbAsyncInit: () => void
   }
 }
 
@@ -32,6 +34,34 @@ interface FBApiResponse {
 
 export function LoginPage() {
   const navigate = useNavigate()
+
+  useEffect(() => {
+    // Load Facebook SDK
+    const loadFacebookSDK = () => {
+      if (window.FB) return
+
+      window.fbAsyncInit = function () {
+        window.FB.init({
+          appId: import.meta.env.VITE_FB_APP_ID,
+          cookie: true,
+          xfbml: true,
+          version: 'v18.0',
+        })
+      }
+
+      ;(function (d, s, id) {
+        var js,
+          fjs = d.getElementsByTagName(s)[0]
+        if (d.getElementById(id)) return
+        js = d.createElement(s) as HTMLScriptElement
+        js.id = id
+        js.src = 'https://connect.facebook.net/vi_VN/sdk.js'
+        fjs.parentNode?.insertBefore(js, fjs)
+      })(document, 'script', 'facebook-jssdk')
+    }
+
+    loadFacebookSDK()
+  }, [])
 
   const handleFacebookLogin = () => {
     window.FB.login(

@@ -15,6 +15,8 @@ COPY src/client/ ./
 
 # Set env var for build output location
 ENV VITE_OUT_DIR=dist
+ARG VITE_FB_APP_ID
+ENV VITE_FB_APP_ID=$VITE_FB_APP_ID
 RUN npm run build
 
 # --- Stage 2: Build NestJS Server ---
