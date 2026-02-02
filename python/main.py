@@ -18,8 +18,10 @@ from dotenv import load_dotenv
 from graph import app_graph
 from state import InvoiceState
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from parent directory
+# (Python runs in python/ but .env is in root)
+load_dotenv(dotenv_path="../.env")
+load_dotenv()  # Also try current directory as fallback
 
 # Khởi tạo FastAPI app
 app = FastAPI(
