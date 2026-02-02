@@ -40,6 +40,20 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
+  // Proxy /webhook to AI Service (Python)
+  // This is needed for production/docker where Vite proxy is not checking
+  const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8080';
+  const { createProxyMiddleware } = require('http-proxy-middleware');
+
+  app.use(
+    '/webhook',
+    createProxyMiddleware({
+      target: aiServiceUrl,
+      changeOrigin: true,
+      logLevel: 'debug', 
+    }),
+  );
+
   const port = process.env.APP_PORT || 3000;
   await app.listen(port);
   console.log(`🚀 LuckyBot API running on http://localhost:${port}`);
