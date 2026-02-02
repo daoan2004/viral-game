@@ -27,8 +27,7 @@ services:
     restart: always
     ports:
       - "${PORT:-8080}:8080"
-    env_file:
-      - .env
+
     environment:
       # Override config for docker network
       - PORT=8080
