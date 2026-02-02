@@ -23,9 +23,26 @@ class TenantService:
                 "shop_patterns": tenant.config.get("shop_patterns", []) if tenant.config else [],
             }
             return tenant_dict
-        except Exception as e:
             print(f"Error getting tenant: {e}")
             return None
+        finally:
+            db.close()
+
+    @staticmethod
+    def update_token(page_id: str, new_token: str) -> bool:
+        db = SessionLocal()
+        try:
+            tenant = db.query(Tenant).filter(Tenant.id == page_id).first()
+            if not tenant:
+                return False
+            
+            tenant.access_token = new_token
+            db.commit()
+            return True
+        except Exception as e:
+            print(f"Error updating token: {e}")
+            db.rollback()
+            return False
         finally:
             db.close()
 

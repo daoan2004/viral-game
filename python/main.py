@@ -240,6 +240,43 @@ async def health_check():
     }
 
 
+@app.post("/update-token")
+async def update_page_token(request: Request):
+    """
+    Admin endpoint để update Page Access Token
+    Secured by: x-admin-secret header (using FB_VERIFY_TOKEN as secret)
+    Body:
+    {
+        "page_id": "123456...",
+        "access_token": "EAA..."
+    }
+    """
+    secret = request.headers.get("x-admin-secret")
+    
+    # Simple auth using FB_VERIFY_TOKEN
+    if not secret or secret != FB_VERIFY_TOKEN:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+        
+    try:
+        body = await request.json()
+        page_id = body.get("page_id")
+        new_token = body.get("access_token")
+        
+        if not page_id or not new_token:
+            raise HTTPException(status_code=400, detail="Missing page_id or access_token")
+            
+        from services import TenantService
+        success = TenantService.update_token(page_id, new_token)
+        
+        if success:
+            return {"status": "success", "message": f"Updated token for Page {page_id}"}
+        else:
+            raise HTTPException(status_code=404, detail=f"Page {page_id} not found")
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     import uvicorn
     from config import settings
