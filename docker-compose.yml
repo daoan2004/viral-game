@@ -39,6 +39,10 @@ services:
       - PORT=8080
       - HOST=0.0.0.0
       - DATABASE_PATH=/app/data/viral_game.sqlite
+      # DeepSeek API for OCR and validation
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      # Fallback Facebook token (if not in database)
+      - FB_PAGE_ACCESS_TOKEN=${FB_PAGE_ACCESS_TOKEN}
     volumes:
       - viral_game_data:/app/data
     networks:
