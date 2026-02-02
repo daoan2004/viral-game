@@ -6,6 +6,8 @@ import { join } from 'path';
 export class SpaController {
   @Get(['/', '/login', '/dashboard', '/dashboard/*'])
   serveSpa(@Res() res: Response) {
-    res.sendFile(join(__dirname, '..', 'public', 'index.html'));
+    const indexPath = join(process.cwd(), 'public', 'index.html');
+    // console.log('Serving SPA from:', indexPath); // Debug log
+    res.sendFile(indexPath);
   }
 }
