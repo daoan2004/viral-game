@@ -22,6 +22,8 @@ services:
       - FB_PAGE_ACCESS_TOKEN=${FB_PAGE_ACCESS_TOKEN}
     volumes:
       - ./data:/usr/src/app/data
+    networks:
+      - viral_network
 
   ai_service:
     build:
