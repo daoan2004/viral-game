@@ -1,5 +1,4 @@
-import { motion } from 'motion/react'
-import { Settings, Save, Sparkles, MessageSquare, Gift } from 'lucide-react'
+import { Sparkles, MessageSquare, Gift } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
