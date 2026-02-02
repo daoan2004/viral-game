@@ -91,7 +91,7 @@ def load_tenant_node(state: InvoiceState) -> Dict[str, Any]:
 
 def download_and_ocr_node(state: InvoiceState) -> Dict[str, Any]:
     """
-    Node 1: Sử dụng DeepSeek Vision API để OCR ảnh hóa đơn
+    Node 1: Sử dụng Google Gemini Vision API để OCR ảnh hóa đơn
     
     Args:
         state: InvoiceState chứa image_url
@@ -106,20 +106,25 @@ def download_and_ocr_node(state: InvoiceState) -> Dict[str, Any]:
         return {"ocr_raw_text": None}
     
     try:
-        # Sử dụng DeepSeek Vision để OCR
-        from langchain_openai import ChatOpenAI
+        # Sử dụng Google Gemini Vision API
+        from langchain_google_genai import ChatGoogleGenerativeAI
         from langchain_core.messages import HumanMessage
+        import base64
         
-        # Get DeepSeek API key
-        deepseek_key = os.getenv("DEEPSEEK_API_KEY")
-        if not deepseek_key:
-            raise ValueError("DEEPSEEK_API_KEY not found in environment")
+        # Get Gemini API key
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_key:
+            raise ValueError("GEMINI_API_KEY not found in environment")
         
-        # Initialize DeepSeek model (LangChain expects openai_api_key param)
-        llm = ChatOpenAI(
-            model="deepseek-chat",
-            openai_api_key=deepseek_key,  # Use openai_api_key param for compatibility
-            base_url="https://api.deepseek.com",
+        # Download and encode image
+        img_response = requests.get(state["image_url"], timeout=10)
+        img_response.raise_for_status()
+        img_base64 = base64.b64encode(img_response.content).decode('utf-8')
+        
+        # Initialize Gemini model
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-1.5-flash",  # Fast and free
+            google_api_key=gemini_key,
             temperature=0
         )
         
@@ -129,38 +134,54 @@ def download_and_ocr_node(state: InvoiceState) -> Dict[str, Any]:
                 {
                     "type": "text",
                     "text": """Bạn là một OCR expert. Hãy trích xuất TẤT CẢ text từ ảnh hóa đơn này.
-                    
+
 Yêu cầu:
-- Giữ nguyên format và layout
-- Bao gồm tên cửa hàng, địa chỉ, số hóa đơn, các món, giá tiền
+- Giữ nguyên format và layout của hóa đơn
+- Bao gồm: tên cửa hàng, địa chỉ, số hóa đơn, danh sách món, giá tiền
+- Đọc chính xác các số tiền (quan trọng!)
 - Không bỏ sót bất kỳ thông tin nào
-- Chỉ trả về text đã OCR, không giải thích gì thêm"""
+- CHỈ trả về text đã OCR, KHÔNG giải thích thêm
+
+VÍ DỤ OUTPUT:
+```
+Em An Tinh Nghịch
+Địa chỉ: 123 Đường ABC
+Số HĐ: HD-123456
+------------------------
+1x Trà sữa       45.000đ
+2x Bánh flan     30.000đ
+------------------------
+Tổng cộng:       75.000đ
+```"""
                 },
                 {
                     "type": "image_url",
-                    "image_url": {"url": state["image_url"]}
+                    "image_url": f"data:image/jpeg;base64,{img_base64}"
                 }
             ]
         )
         
-        # Call API
+        # Call Gemini API
         response = llm.invoke([message])
         ocr_text = response.content
         
-        print(f"✅ [OCR Node] OCR thành công với DeepSeek Vision")
+        # Validate response
+        if not ocr_text or len(ocr_text) < 20:
+            raise ValueError("Gemini returned empty or invalid OCR result")
+        
+        print(f"✅ [OCR Node] OCR thành công với Gemini Vision")
         print(f"📝 [OCR Node] === RAW OCR TEXT ===")
         print(ocr_text[:500] if len(ocr_text) > 500 else ocr_text)
         print(f"📝 [OCR Node] === END OCR TEXT ===")
         
-        return {"ocr_raw_text": ocr_text, "error": None}
+        return {"ocr_raw_text": ocr_text.strip(), "error": None}
         
     except Exception as e:
-        error_msg = f"Lỗi khi OCR ảnh: {str(e)}"
+        error_msg = f"Lỗi OCR với Gemini: {str(e)}"
         print(f"❌ [OCR Node] {error_msg}")
-        return {
-            "ocr_raw_text": None,
-            "error": error_msg
-        }
+        return {"ocr_raw_text": None, "error": error_msg}
+
+
 
 
 

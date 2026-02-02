@@ -6,11 +6,9 @@ python-multipart
 # LangChain và LangGraph
 langchain
 langchain-openai
+langchain-google-genai
 langgraph
 
-# Xử lý ảnh và OCR
-pytesseract
-Pillow
 
 # HTTP requests
 requests
