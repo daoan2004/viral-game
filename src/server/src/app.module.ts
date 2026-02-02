@@ -17,7 +17,7 @@ import { Tenant } from './pages/tenant.entity';
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public'),
-      exclude: ['/api*'],
+      exclude: ['/api/(.*)'],
       serveStaticOptions: {
         fallthrough: true,
       },
