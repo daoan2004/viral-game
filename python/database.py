@@ -14,8 +14,14 @@ env_path = os.path.join(BASE_DIR, ".env")
 load_dotenv(env_path)
 
 # Cấu hình đường dẫn DB
-# Đảm bảo trỏ đúng vào thư mục data/ ở root
-DB_FILE = os.path.join(BASE_DIR, "data", "viral_game.sqlite")
+# Prioritize env var (set in docker-compose)
+env_db_path = os.getenv("DATABASE_PATH")
+if env_db_path:
+    DB_FILE = env_db_path
+else:
+    # Local fallback
+    DB_FILE = os.path.join(BASE_DIR, "data", "viral_game.sqlite")
+
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_FILE}"
 
 print(f"📦 [Database] Connecting to SQLite at: {DB_FILE}")

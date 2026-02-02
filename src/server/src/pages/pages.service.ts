@@ -36,8 +36,13 @@ export class PagesService {
 
   async update(id: string, updatePageDto: any) {
     const existing = await this.tenantRepository.findOneBy({ id });
+    
     if (!existing) {
-      throw new NotFoundException('Page not found');
+      // If not exists, create it (Upsert logic)
+      return this.create({
+        id,
+        ...updatePageDto
+      });
     }
 
     await this.tenantRepository.update(id, updatePageDto);
