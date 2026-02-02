@@ -25,7 +25,7 @@ export class PagesService {
   async create(createPageDto: any) {
     const newTenant = this.tenantRepository.create({
       ...createPageDto,
-      shop_name: createPageDto.shop_name || createPageDto.name, // Map frontend 'name' to entity 'shop_name'
+      shop_name: createPageDto.shop_name || createPageDto.name || `Page ${createPageDto.id || 'Unknown'}`, // Fallback to avoid Not Null error
       is_active: true,
       totalSpins: 0,
       totalPrizes: 0,
@@ -45,7 +45,23 @@ export class PagesService {
       });
     }
 
-    await this.tenantRepository.update(id, updatePageDto);
+    // Separate valid entity fields from config data
+    const { shop_name, access_token, is_active, ...configData } = updatePageDto;
+    
+    const updateData: any = {};
+    if (shop_name !== undefined) updateData.shop_name = shop_name;
+    if (access_token !== undefined) updateData.access_token = access_token;
+    if (is_active !== undefined) updateData.is_active = is_active;
+    
+    // Store everything else in config JSON field
+    if (Object.keys(configData).length > 0) {
+      updateData.config = {
+        ...(existing.config || {}),
+        ...configData
+      };
+    }
+
+    await this.tenantRepository.update(id, updateData);
     return this.tenantRepository.findOneBy({ id });
   }
 

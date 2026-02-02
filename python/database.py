@@ -14,12 +14,17 @@ env_path = os.path.join(BASE_DIR, ".env")
 load_dotenv(env_path)
 
 # Cấu hình đường dẫn DB
-# Prioritize env var (set in docker-compose)
+# 1. Check for dedicated Python env var (PYTHON_DB_PATH)
+env_python_db_path = os.getenv("PYTHON_DB_PATH")
+# 2. Check for global DATABASE_PATH (only if absolute - Docker)
 env_db_path = os.getenv("DATABASE_PATH")
-if env_db_path:
+
+if env_python_db_path:
+    DB_FILE = env_python_db_path
+elif env_db_path and os.path.isabs(env_db_path):
     DB_FILE = env_db_path
 else:
-    # Local fallback
+    # 3. Local fallback (calculated directly from project root)
     DB_FILE = os.path.join(BASE_DIR, "data", "viral_game.sqlite")
 
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_FILE}"

@@ -13,6 +13,7 @@ export default defineConfig({
     },
   },
   server: {
+    host: true, // Listen on 0.0.0.0 to fix IPv6/IPv4 Ngrok issues
     allowedHosts: ['proximally-pantomimic-jennefer.ngrok-free.dev'],
     port: 3000,
     proxy: {

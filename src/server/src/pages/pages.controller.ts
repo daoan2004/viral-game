@@ -44,7 +44,8 @@ export class PagesController {
     try {
       return await this.pagesService.update(id, updatePageDto);
     } catch (error) {
-      throw new Error('Page not found');
+           console.error('Error updating page:', error); // Log real error
+           throw error; // Rethrow original error (e.g. DB constraint)
     }
   }
 
