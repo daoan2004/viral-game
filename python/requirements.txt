@@ -23,5 +23,5 @@ python-dotenv
 pydantic
 pydantic-settings
 
-# Firebase
-firebase-admin
+# Database (SQLite)
+sqlalchemy
