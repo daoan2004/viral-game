@@ -61,7 +61,8 @@ export function PageDetailPage() {
 
       if (res.ok) {
         const data = await res.json()
-        const page = data.page
+        // Backend now returns flattened data (no {page: ...} wrapper)
+        const page = data
 
         setPageName(page.shop_name || '')
         setConfig({

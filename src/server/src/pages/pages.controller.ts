@@ -21,8 +21,15 @@ export class PagesController {
   @ApiResponse({ status: 404, description: 'Page not found' })
   async findOne(@Param('id') id: string) {
     try {
-      const page = await this.pagesService.findOne(id);
-      return page;
+      const result = await this.pagesService.findOne(id);
+      const page = (result as any).page || result; // Handle both {page: ...} and direct return
+      
+      // Flatten config to top level for frontend compatibility
+      const { config, ...pageData } = page as any;
+      return {
+        ...pageData,
+        ...(config || {}), // Spread config fields (shop_patterns, prizes, etc.)
+      };
     } catch (error) {
       throw new Error('Page not found');
     }

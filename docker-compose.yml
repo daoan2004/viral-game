@@ -17,11 +17,11 @@ services:
       - AI_SERVICE_URL=http://ai_service:8080
       - NODE_ENV=production
       - DATABASE_PATH=/usr/src/app/data/viral_game.sqlite
-      # Facebook webhook verification
+      # Facebook webhook verification (shared across all pages)
       - FB_VERIFY_TOKEN=${FB_VERIFY_TOKEN}
-      - FB_PAGE_ACCESS_TOKEN=${FB_PAGE_ACCESS_TOKEN}
+      # Note: Page access tokens are stored per-page in database, not in env
     volumes:
-      - ./data:/usr/src/app/data
+      - viral_game_data:/usr/src/app/data
     networks:
       - viral_network
 
@@ -40,9 +40,13 @@ services:
       - HOST=0.0.0.0
       - DATABASE_PATH=/app/data/viral_game.sqlite
     volumes:
-      - ./data:/app/data
+      - viral_game_data:/app/data
     networks:
       - viral_network
+
+volumes:
+  viral_game_data:
+    driver: local
 
 networks:
   viral_network:
