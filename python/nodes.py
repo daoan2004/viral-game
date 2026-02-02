@@ -123,7 +123,7 @@ def download_and_ocr_node(state: InvoiceState) -> Dict[str, Any]:
         
         # Initialize Gemini model
         llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash",  # Fast and free
+            model="gemini-pro-vision",  # Free tier vision model
             google_api_key=gemini_key,
             temperature=0
         )
