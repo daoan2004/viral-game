@@ -6,7 +6,8 @@ import { join } from 'path';
 
 import { PagesModule } from './pages/pages.module';
 import { StatsModule } from './stats/stats.module';
-import { SpaController } from './spa.controller';
+import { WebhookModule } from './webhook/webhook.module';
+import { SpaModule } from './spa.module';
 import { Tenant } from './pages/tenant.entity';
 
 @Module({
@@ -29,7 +30,8 @@ import { Tenant } from './pages/tenant.entity';
     }),
     PagesModule,
     StatsModule,
+    WebhookModule,
+    SpaModule, // Import last to give lowest routing priority
   ],
-  controllers: [SpaController],
 })
 export class AppModule {}

@@ -26,8 +26,10 @@ async function bootstrap() {
     }),
   );
 
-  // API prefix
-  app.setGlobalPrefix('api');
+  // API prefix (exclude webhook for Facebook)
+  app.setGlobalPrefix('api', {
+    exclude: ['/webhook'],
+  });
 
   // Swagger documentation
   const config = new DocumentBuilder()
@@ -40,19 +42,17 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  // Proxy /webhook to AI Service (Python)
-  // This is needed for production/docker where Vite proxy is not checking
-  const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8080';
-  const { createProxyMiddleware } = require('http-proxy-middleware');
-
-  app.use(
-    '/webhook',
-    createProxyMiddleware({
-      target: aiServiceUrl,
-      changeOrigin: true,
-      logLevel: 'debug', 
-    }),
-  );
+  // Webhook proxy no longer needed - WebhookController handles it
+  // const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8080';
+  // const { createProxyMiddleware } = require('http-proxy-middleware');
+  // app.use(
+  //   '/webhook',
+  //   createProxyMiddleware({
+  //     target: aiServiceUrl,
+  //     changeOrigin: true,
+  //     logLevel: 'debug', 
+  //   }),
+  // );
 
   const port = process.env.APP_PORT || 3000;
   await app.listen(port);
