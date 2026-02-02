@@ -173,9 +173,13 @@ Yêu cầu:
         return {"ocr_raw_text": ocr_text.strip(), "error": None}
         
     except Exception as e:
+        # Technical error for logs
         error_msg = f"Lỗi OCR với DeepSeek-OCR Proxy: {str(e)}"
         print(f"❌ [OCR Node] {error_msg}")
-        return {"ocr_raw_text": None, "error": error_msg}
+        
+        # Friendly message for user
+        friendly_msg = "Không thể đọc được ảnh hóa đơn. Bạn vui lòng chụp lại rõ nét hơn (đủ ánh sáng, không bị mờ) và gửi lại nhé!"
+        return {"ocr_raw_text": None, "error": friendly_msg}
         response = llm.invoke([message])
         ocr_text = response.content
         
@@ -354,15 +358,20 @@ OUTPUT FORMAT:
             "error": error_msg,
         }
     except Exception as e:
+        # Technical error for logs
         error_msg = f"Lỗi khi gọi DeepSeek API: {str(e)}"
         print(f"❌ [Validate Node] {error_msg}")
+        
+        # Friendly message
+        friendly_msg = "Hệ thống đang bận xử lý, bạn vui lòng thử lại sau ít phút nhé!"
+        
         return {
             "validation_result": {
                 "valid": False,
-                "reason": "Hệ thống đang bận, vui lòng thử lại sau.",
+                "reason": friendly_msg,
                 "data": {"invoice_id": None, "shop_name": None}
             },
-            "error": error_msg,
+            "error": friendly_msg,
         }
 
 
@@ -539,9 +548,16 @@ def send_message_node(state: InvoiceState) -> Dict[str, Any]:
     
     # Nếu có lỗi và không có final_response
     if not message_text and state.get("error"):
-        message_text = f"❌ Đã xảy ra lỗi: {state['error']}\n\nVui lòng thử lại sau!"
+        error_content = str(state['error'])
+        # Safety net: Nếu vẫn còn lộ technical error (chứa từ khóa nhạy cảm)
+        if "Traceback" in error_content or "Error" in error_content or "Exception" in error_content:
+             message_text = "Hệ thống đang gặp sự cố nhỏ. Bạn vui lòng thử lại sau nhé! 👇"
+             print(f"⚠️ [Send Message Node] Masked error: {error_content}")
+        else:
+             message_text = f"❌ {error_content}"
+             
     elif not message_text:
-        message_text = "Đã xử lý xong!"
+        message_text = "Đã nhận được ảnh của bạn! Hệ thống đang xử lý..."
 
     # Lấy Page Access Token từ tenant config HOẶC env (fallback)
     tenant = state.get("tenant_config", {})
