@@ -110,10 +110,15 @@ def download_and_ocr_node(state: InvoiceState) -> Dict[str, Any]:
         from langchain_openai import ChatOpenAI
         from langchain_core.messages import HumanMessage
         
-        # Initialize DeepSeek model
+        # Get DeepSeek API key
+        deepseek_key = os.getenv("DEEPSEEK_API_KEY")
+        if not deepseek_key:
+            raise ValueError("DEEPSEEK_API_KEY not found in environment")
+        
+        # Initialize DeepSeek model (LangChain expects openai_api_key param)
         llm = ChatOpenAI(
             model="deepseek-chat",
-            api_key=os.getenv("DEEPSEEK_API_KEY"),
+            openai_api_key=deepseek_key,  # Use openai_api_key param for compatibility
             base_url="https://api.deepseek.com",
             temperature=0
         )
