@@ -41,8 +41,9 @@ services:
       - DATABASE_PATH=/app/data/viral_game.sqlite
       # DeepSeek API for validation
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
-      # Google Gemini API for OCR
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      # Anthropic Proxy for OCR
+      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL}
+      - ANTHROPIC_AUTH_TOKEN=${ANTHROPIC_AUTH_TOKEN}
       # Fallback Facebook token (if not in database)
       - FB_PAGE_ACCESS_TOKEN=${FB_PAGE_ACCESS_TOKEN}
     volumes:

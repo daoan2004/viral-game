@@ -6,7 +6,7 @@ python-multipart
 # LangChain và LangGraph
 langchain
 langchain-openai
-langchain-google-genai
+langchain-anthropic
 langgraph
 
 
