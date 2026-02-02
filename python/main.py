@@ -150,17 +150,12 @@ async def receive_message(request: Request, background_tasks: BackgroundTasks):
         if body.get("object") != "page":
             return {"status": "ignored - not a page event"}
 
-        # Dictionary để lưu tin nhắn mới nhất của mỗi user
-        # Key: sender_id, Value: (timestamp, page_id, image_url)
-        latest_valid_messages: Dict[str, Dict[str, Any]] = {}
-
         # Duyệt qua các entries
         for entry in body.get("entry", []):
             page_id_entry = entry.get("id")
             
             for messaging_event in entry.get("messaging", []):
                 sender_id = messaging_event.get("sender", {}).get("id")
-                timestamp = messaging_event.get("timestamp", 0)
                 
                 # Determine Page ID
                 tenant_page_id = page_id_entry or messaging_event.get("recipient", {}).get("id")
@@ -174,41 +169,18 @@ async def receive_message(request: Request, background_tasks: BackgroundTasks):
                         image_url = attachment.get("payload", {}).get("url")
 
                         if sender_id and tenant_page_id and image_url:
-                            # Check if we already have a message for this user
-                            if sender_id in latest_valid_messages:
-                                prev_timestamp = latest_valid_messages[sender_id]["timestamp"]
-                                if timestamp > prev_timestamp:
-                                    # Update with newer message
-                                    latest_valid_messages[sender_id] = {
-                                        "timestamp": timestamp,
-                                        "page_id": tenant_page_id,
-                                        "image_url": image_url
-                                    }
-                            else:
-                                # First message found for this user
-                                latest_valid_messages[sender_id] = {
-                                    "timestamp": timestamp,
-                                    "page_id": tenant_page_id,
-                                    "image_url": image_url
-                                }
-        
-        # Process ONLY the latest message for each user
-        if not latest_valid_messages:
-            return {"status": "ok - no images found"}
-            
-        print(f"🔍 Đã lọc và tìm thấy {len(latest_valid_messages)} tin nhắn mới nhất cần xử lý.")
-        
-        for sender_id, data in latest_valid_messages.items():
-            print(f"  📸 Ảnh mới nhất từ user {sender_id} -> Page {data['page_id']}")
-            print(f"     URL: {data['image_url'][:50]}... (TS: {data['timestamp']})")
+                            print(f"  📸 Ảnh từ user {sender_id} -> Page {tenant_page_id}")
+                            print(f"     URL: {image_url[:50]}...")
 
-            # Thêm vào background tasks để xử lý ngầm
-            background_tasks.add_task(
-                process_invoice_async,
-                sender_id=sender_id,
-                page_id=data["page_id"],
-                image_url=data["image_url"],
-            )
+                            # Thêm vào background tasks để xử lý ngầm
+                            background_tasks.add_task(
+                                process_invoice_async,
+                                sender_id=sender_id,
+                                page_id=tenant_page_id,
+                                image_url=image_url,
+                            )
+
+                            print(f"  ✅ Đã thêm vào background task queue")
 
         # Trả về 200 OK ngay lập tức
         return {"status": "ok"}
