@@ -15,33 +15,30 @@ import json
 import random
 from typing import Dict, Any
 import requests
-from PIL import Image
-from io import BytesIO
 
 # Import LangChain components
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from state import InvoiceState
-from state import InvoiceState
 from services import TenantService, InvoiceService
 
 # ============================================================================
-# LAZY IMPORT PYTESSERACT
+# IMPORT DEPENDENCIES
 # ============================================================================
+import os
+import json
+import random
+from typing import Dict, Any
+import requests
 
-try:
-    import pytesseract
+# Import LangChain components
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, SystemMessage
 
-    # Cấu hình đường dẫn Tesseract trên Windows
-    pytesseract.pytesseract.tesseract_cmd = (
-        r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-    )
+from state import InvoiceState
+from services import TenantService, InvoiceService
 
-    PYTESSERACT_AVAILABLE = True
-except ImportError:
-    PYTESSERACT_AVAILABLE = False
-    print("⚠️ pytesseract không khả dụng. Sẽ sử dụng OCR giả lập.")
 
 
 # ============================================================================
@@ -94,73 +91,72 @@ def load_tenant_node(state: InvoiceState) -> Dict[str, Any]:
 
 def download_and_ocr_node(state: InvoiceState) -> Dict[str, Any]:
     """
-    Node 1: Download ảnh từ URL và thực hiện OCR
-
+    Node 1: Sử dụng DeepSeek Vision API để OCR ảnh hóa đơn
+    
     Args:
         state: InvoiceState chứa image_url
-
+        
     Returns:
         Dict với key 'ocr_raw_text' chứa kết quả OCR
     """
-    print(f"📥 [OCR Node] Đang tải ảnh từ: {state['image_url']}")
-
+    print(f"📥 [OCR Node] Đang xử lý ảnh từ: {state['image_url']}")
+    
     # Kiểm tra có lỗi từ bước trước không
     if state.get("error"):
         return {"ocr_raw_text": None}
-
+    
     try:
-        # Tải ảnh về
-        response = requests.get(state["image_url"], timeout=10)
-        response.raise_for_status()
-
-        # Mở ảnh bằng PIL
-        image = Image.open(BytesIO(response.content))
+        # Sử dụng DeepSeek Vision để OCR
+        from langchain_openai import ChatOpenAI
+        from langchain_core.messages import HumanMessage
         
-        # Preprocess image để OCR tốt hơn
-        # Convert to RGB if needed
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-
-        # Thực hiện OCR
-        if PYTESSERACT_AVAILABLE:
-            # Thử OCR với tiếng Việt + English
-            try:
-                ocr_text = pytesseract.image_to_string(image, lang="vie+eng")
-            except:
-                ocr_text = pytesseract.image_to_string(image, lang="vie")
-            
-            print(f"✅ [OCR Node] OCR thành công với pytesseract")
-            print(f"📝 [OCR Node] === RAW OCR TEXT ===")
-            print(ocr_text[:500] if len(ocr_text) > 500 else ocr_text)
-            print(f"📝 [OCR Node] === END OCR TEXT ===")
-        else:
-            # Giả lập OCR cho demo - lấy tên quán từ tenant config nếu có
-            tenant = state.get("tenant_config", {})
-            shop_name = tenant.get("shop_name", "Demo Shop")
-            
-            ocr_text = f"""
-            {shop_name}
-            Địa chỉ: 123 Demo Street
-            
-            HÓA ĐƠN BÁN HÀNG
-            Số HĐ: INV-2026-{random.randint(10000, 99999)}
-            Ngày: 25/01/2026
-            
-            1x Món ăn demo      55.000đ
-            1x Nước uống         5.000đ
-            
-            Tổng cộng:          60.000đ
-            
-            Cảm ơn quý khách!
-            """
-            print(f"✅ [OCR Node] Sử dụng OCR giả lập (demo)")
-
-        return {"ocr_raw_text": ocr_text.strip(), "error": None}
-
+        # Initialize DeepSeek model
+        llm = ChatOpenAI(
+            model="deepseek-chat",
+            api_key=os.getenv("DEEPSEEK_API_KEY"),
+            base_url="https://api.deepseek.com",
+            temperature=0
+        )
+        
+        # Create message with image
+        message = HumanMessage(
+            content=[
+                {
+                    "type": "text",
+                    "text": """Bạn là một OCR expert. Hãy trích xuất TẤT CẢ text từ ảnh hóa đơn này.
+                    
+Yêu cầu:
+- Giữ nguyên format và layout
+- Bao gồm tên cửa hàng, địa chỉ, số hóa đơn, các món, giá tiền
+- Không bỏ sót bất kỳ thông tin nào
+- Chỉ trả về text đã OCR, không giải thích gì thêm"""
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {"url": state["image_url"]}
+                }
+            ]
+        )
+        
+        # Call API
+        response = llm.invoke([message])
+        ocr_text = response.content
+        
+        print(f"✅ [OCR Node] OCR thành công với DeepSeek Vision")
+        print(f"📝 [OCR Node] === RAW OCR TEXT ===")
+        print(ocr_text[:500] if len(ocr_text) > 500 else ocr_text)
+        print(f"📝 [OCR Node] === END OCR TEXT ===")
+        
+        return {"ocr_raw_text": ocr_text, "error": None}
+        
     except Exception as e:
-        error_msg = f"Lỗi khi tải/OCR ảnh: {str(e)}"
+        error_msg = f"Lỗi khi OCR ảnh: {str(e)}"
         print(f"❌ [OCR Node] {error_msg}")
-        return {"ocr_raw_text": None, "error": error_msg}
+        return {
+            "ocr_raw_text": None,
+            "error": error_msg
+        }
+
 
 
 # ============================================================================
@@ -509,7 +505,7 @@ def send_message_node(state: InvoiceState) -> Dict[str, Any]:
 
     # Lấy Page Access Token từ tenant config HOẶC env (fallback)
     tenant = state.get("tenant_config", {})
-    page_access_token = tenant.get("page_access_token") or os.getenv("FB_PAGE_ACCESS_TOKEN")
+    page_access_token = tenant.get("access_token") or os.getenv("FB_PAGE_ACCESS_TOKEN")
 
     if not page_access_token:
         print("❌ [Send Message Node] Không tìm thấy Page Access Token")
