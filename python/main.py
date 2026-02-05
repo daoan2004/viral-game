@@ -160,8 +160,21 @@ async def receive_message(request: Request, background_tasks: BackgroundTasks):
                 # Determine Page ID
                 tenant_page_id = page_id_entry or messaging_event.get("recipient", {}).get("id")
 
-                # Get attachments
+                # Get message
                 message = messaging_event.get("message", {})
+                
+                # ⚠️ QUAN TRỌNG: Bỏ qua tin nhắn echo (từ chính bot gửi đi)
+                # Nếu không check này, bot sẽ xử lý lại tin nhắn của chính nó → vòng lặp vô hạn!
+                if message.get("is_echo"):
+                    print(f"  ⏭️  Bỏ qua echo message từ bot")
+                    continue
+                
+                # Bỏ qua tin nhắn text (chỉ xử lý ảnh)
+                if "text" in message and "attachments" not in message:
+                    print(f"  ⏭️  Bỏ qua text message (không có ảnh)")
+                    continue
+
+                # Get attachments
                 attachments = message.get("attachments", [])
 
                 for attachment in attachments:

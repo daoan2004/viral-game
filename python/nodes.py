@@ -276,35 +276,77 @@ def validate_invoice_node(state: InvoiceState) -> Dict[str, Any]:
 NHIỆM VỤ:
 
 1. KIỂM TRA TÊN QUÁN (quan trọng nhất):
-   - Tìm tên quán/nhà hàng/cửa hàng trong text (thường ở đầu hóa đơn)
-   - So khớp với các từ khóa: {patterns_str}
-   - Lưu ý: OCR có thể sai chính tả nhẹ, hãy linh hoạt nhận dạng
-   - VD: "Em An Tinh Nghịch" có thể bị OCR thành "Em An Tĩnh Nghịch", "Em An Tinh Nghich" - vẫn chấp nhận
-   - Nếu KHÔNG tìm thấy tên quán khớp với từ khóa -> valid: false
+   
+   **TÊN CẦN TÌM:** {patterns_str}
+   
+   **QUY TẮC NHẬN DIỆN LINH HOẠT - ĐỌC KỸ:**
+   
+   A. TIỀN TỐ/HẬU TỐ (bỏ qua khi so sánh):
+      - Tiền tố: "NHÀ HÀNG", "QUÁN", "CỬA HÀNG", "TIỆM", "SHOP", "RESTAURANT", "CAFE", "COFFEE"
+      - Hậu tố: "STORE", "HOUSE", "KITCHEN", "BISTRO"
+      - VD: "NHÀ HÀNG EM AN TINH NGHỊCH" = "Em An Tinh Nghịch" [CHẤP NHẬN]
+   
+   B. LỖI OCR THƯỜNG GẶP (chấp nhận):
+      - Dấu thanh: "Tinh" <-> "Tĩnh" <-> "Tịnh" <-> "Tính"
+      - Thiếu dấu: "Nghịch" <-> "Nghich" <-> "Nghịch"
+      - Chữ i/l: "Tinh" <-> "Tlnh"
+      - Chữ o/0: "Soma" <-> "S0ma"
+      - Khoảng trắng: "EmAn" <-> "Em An"
+   
+   C. VIẾT HOA/THƯỜNG (bỏ qua):
+      - "em an tinh nghịch" = "EM AN TINH NGHỊCH" = "Em An Tinh Nghịch" [CHẤP NHẬN]
+   
+   D. KÝ TỰ ĐẶC BIỆT (bỏ qua):
+      - Dấu gạch ngang, dấu chấm, dấu phẩy
+      - "Em-An" = "Em.An" = "Em An" [CHẤP NHẬN]
+   
+   E. FUZZY MATCHING (độ tương đồng >= 70%):
+      - Nếu tên có 3+ từ, cho phép 1 từ sai/thiếu
+      - VD: "Em An Nghịch" (thiếu "Tinh") vẫn chấp nhận nếu độ tương đồng cao
+   
+   F. VỊ TRÍ TÌM KIẾM:
+      - Ưu tiên: 3 dòng đầu tiên của hóa đơn
+      - Backup: Toàn bộ văn bản nếu không tìm thấy ở đầu
+   
+   **CÁCH SO SÁNH:**
+   1. Loại bỏ tiền tố/hậu tố phổ biến
+   2. Chuẩn hóa: lowercase, bỏ dấu, bỏ ký tự đặc biệt
+   3. So sánh chuỗi đã chuẩn hóa
+   4. Nếu khớp >= 70% -> valid: true
+   
+   **VÍ DỤ CHẤP NHẬN (với pattern "Em An Tinh Nghịch"):**
+   [OK] "NHÀ HÀNG EM AN TINH NGHỊCH"
+   [OK] "QUÁN EM AN TĨNH NGHỊCH" (lỗi dấu)
+   [OK] "Em An Tinh Nghich" (thiếu dấu)
+   [OK] "EMAN TINH NGHỊCH" (thiếu space)
+   [OK] "Em.An.Tinh.Nghịch"
+   [OK] "em an tinh nghịch" (lowercase)
+   [OK] "Nhà hàng Em An Nghịch" (thiếu "Tinh" nhưng độ tương đồng cao)
+   
+   **VÍ DỤ TỪ CHỐI:**
+   [REJECT] "Nhà hàng Soma Tea" (tên khác hoàn toàn)
+   [REJECT] "Quán Ăn Ngon" (không liên quan)
 
 2. TRÍCH XUẤT MÃ HÓA ĐƠN:
    - Tìm số hóa đơn/mã đơn hàng trong text
-   - Các pattern thường gặp:
-     * "Số HĐ:", "Mã HĐ:", "Hóa đơn số:", "Invoice:", "Bill No:", "#"
-     * "Đơn hàng:", "Order:", "Mã đơn:"
-     * Dãy số/chữ duy nhất ở đầu hoặc cuối hóa đơn
-   - Nếu không tìm thấy mã cụ thể, tạo mã từ thông tin có sẵn (ngày + giờ + tổng tiền)
-   - VÍ DỤ: Nếu thấy "27/01/2026 14:30" và "Tổng: 150.000đ" -> invoice_id = "270126-1430-150K"
+   - Các pattern: "Số HĐ:", "Mã HĐ:", "Bill:", "Invoice:", "Ban:", "Số:", "#"
+   - Nếu không tìm thấy, tạo từ: Ngày + Giờ + Tổng tiền
+   - VD: "26/01/2026 19:45" + "45.360đ" -> "260126-1945-45K"
 
 3. QUY TẮC OUTPUT:
-   - valid = true: Chỉ khi tên quán khớp với từ khóa
-   - valid = false: Khi không tìm thấy tên quán hoặc tên quán khác
-   - invoice_id: KHÔNG ĐƯỢC để null nếu valid=true, phải tạo mã nếu không tìm thấy
-   - shop_name: Tên quán phát hiện được trên hóa đơn
+   - valid = true: Khi tên quán khớp theo quy tắc trên (>= 70% tương đồng)
+   - valid = false: Khi tên quán khác hoàn toàn (< 70% tương đồng)
+   - invoice_id: Bắt buộc có nếu valid=true
+   - shop_name: Tên đầy đủ phát hiện được (bao gồm tiền tố nếu có)
 
-QUAN TRỌNG: Chỉ trả về JSON thuần, không markdown, không giải thích thêm.
+QUAN TRỌNG: Chỉ trả về JSON thuần, không markdown, không giải thích.
 
 OUTPUT FORMAT:
 {{
     "valid": true/false,
     "reason": "Hóa đơn hợp lệ" hoặc "Lý do từ chối cụ thể",
     "data": {{
-        "invoice_id": "mã hóa đơn (bắt buộc nếu valid=true)",
+        "invoice_id": "mã hóa đơn",
         "shop_name": "tên quán phát hiện được"
     }}
 }}"""
