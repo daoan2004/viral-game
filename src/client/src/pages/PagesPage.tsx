@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Settings, Trash2, Check, X, RefreshCw } from 'lucide-react'
+import { Plus, Settings, Trash2, Check, X, RefreshCw, Key } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -29,6 +29,26 @@ export function PagesPage() {
   const [connectedPages, setConnectedPages] = useState<Map<string, TenantPage>>(new Map())
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  
+  // Token update modal state
+  const [showTokenModal, setShowTokenModal] = useState(false)
+  const [selectedPage, setSelectedPage] = useState<{ id: string; name: string } | null>(null)
+  const [newToken, setNewToken] = useState('')
+  const [updateLoading, setUpdateLoading] = useState(false)
+
+  // Notification state
+  const [notification, setNotification] = useState<{
+    show: boolean
+    type: 'success' | 'error'
+    message: string
+  }>({ show: false, type: 'success', message: '' })
+
+  const showNotification = (type: 'success' | 'error', message: string) => {
+    setNotification({ show: true, type, message })
+    setTimeout(() => {
+      setNotification({ show: false, type: 'success', message: '' })
+    }, 3000)
+  }
 
   useEffect(() => {
     loadData()
@@ -117,6 +137,39 @@ export function PagesPage() {
       alert('Failed to disconnect page')
     }
     setActionLoading(null)
+  }
+
+  const handleUpdateToken = async () => {
+    if (!selectedPage) return
+    
+    if (!newToken || newToken.length < 50) {
+      showNotification('error', 'Access Token không hợp lệ. Token phải có ít nhất 50 ký tự.')
+      return
+    }
+
+    setUpdateLoading(true)
+    try {
+      const res = await fetch(`/api/pages/${selectedPage.id}/token`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ access_token: newToken }),
+      })
+
+      if (res.ok) {
+        showNotification('success', 'Cập nhật Access Token thành công!')
+        setShowTokenModal(false)
+        setNewToken('')
+        setSelectedPage(null)
+        loadData() // Refresh data
+      } else {
+        const error = await res.json()
+        showNotification('error', error.message || 'Không thể cập nhật token')
+      }
+    } catch (error) {
+      console.error('Error updating token:', error)
+      showNotification('error', 'Lỗi khi cập nhật token')
+    }
+    setUpdateLoading(false)
   }
 
   // Merge FB pages with connected status
@@ -227,6 +280,17 @@ export function PagesPage() {
                       <Button
                         variant="outline"
                         size="icon"
+                        onClick={() => {
+                          setSelectedPage({ id: page.id, name: page.tenant?.shop_name || page.name })
+                          setShowTokenModal(true)
+                        }}
+                        title="Cập nhật Access Token"
+                      >
+                        <Key className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
                         onClick={() => handleDisconnectPage(page.id)}
                         disabled={actionLoading === page.id}
                         className="text-destructive hover:bg-destructive/10"
@@ -256,6 +320,96 @@ export function PagesPage() {
               </CardContent>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* Token Update Modal */}
+      {showTokenModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4">
+            <CardHeader>
+              <CardTitle>Cập nhật Access Token</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Page: {selectedPage?.name}
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Access Token mới
+                </label>
+                <textarea
+                  className="w-full min-h-[100px] p-3 border rounded-md resize-none font-mono text-sm"
+                  placeholder="Paste Access Token từ Facebook Developer Console..."
+                  value={newToken}
+                  onChange={(e) => setNewToken(e.target.value)}
+                />
+              </div>
+
+              <div className="bg-muted p-3 rounded-md text-sm">
+                <p className="font-medium mb-1">📝 Hướng dẫn lấy token:</p>
+                <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                  <li>Truy cập <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener noreferrer" className="text-primary underline">Graph API Explorer</a></li>
+                  <li>Chọn ứng dụng của bạn</li>
+                  <li>Click "Generate Access Token"</li>
+                  <li>Copy token và paste vào đây</li>
+                </ol>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowTokenModal(false)
+                    setNewToken('')
+                    setSelectedPage(null)
+                  }}
+                  disabled={updateLoading}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleUpdateToken}
+                  disabled={updateLoading || !newToken}
+                >
+                  {updateLoading ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Đang cập nhật...
+                    </>
+                  ) : (
+                    'Cập nhật'
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {notification.show && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2">
+          <Card className={`min-w-[300px] border-l-4 ${
+            notification.type === 'success' 
+              ? 'border-l-green-500 bg-green-50' 
+              : 'border-l-red-500 bg-red-50'
+          }`}>
+            <CardContent className="flex items-center gap-3 p-4">
+              {notification.type === 'success' ? (
+                <Check className="w-5 h-5 text-green-600" />
+              ) : (
+                <X className="w-5 h-5 text-red-600" />
+              )}
+              <p className={`font-medium ${
+                notification.type === 'success' ? 'text-green-900' : 'text-red-900'
+              }`}>
+                {notification.message}
+              </p>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

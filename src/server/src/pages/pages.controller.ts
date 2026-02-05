@@ -43,6 +43,21 @@ export class PagesController {
     return this.pagesService.create(createPageDto);
   }
 
+  @Put(':id/token')
+  @ApiOperation({ summary: 'Update page access token' })
+  @ApiResponse({ status: 200, description: 'Token updated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid token' })
+  @ApiResponse({ status: 404, description: 'Page not found' })
+  async updateToken(
+    @Param('id') id: string,
+    @Body() body: { access_token: string }
+  ) {
+    if (!body.access_token || body.access_token.length < 50) {
+      throw new Error('Invalid access token');
+    }
+    return await this.pagesService.updateToken(id, body.access_token);
+  }
+
   @Put(':id')
   @ApiOperation({ summary: 'Update page configuration' })
   @ApiResponse({ status: 200, description: 'Page updated successfully' })

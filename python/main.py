@@ -215,7 +215,6 @@ async def health_check():
     """
     # Kiểm tra các env vars có được set chưa
     env_checks = {
-        "FB_PAGE_ACCESS_TOKEN": bool(os.getenv("FB_PAGE_ACCESS_TOKEN")),
         "FB_VERIFY_TOKEN": bool(os.getenv("FB_VERIFY_TOKEN")),
         "DEEPSEEK_API_KEY": bool(os.getenv("DEEPSEEK_API_KEY")),
     }

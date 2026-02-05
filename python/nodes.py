@@ -559,13 +559,16 @@ def send_message_node(state: InvoiceState) -> Dict[str, Any]:
     elif not message_text:
         message_text = "Đã nhận được ảnh của bạn! Hệ thống đang xử lý..."
 
-    # Lấy Page Access Token từ tenant config HOẶC env (fallback)
+    # Lấy Page Access Token từ tenant config (database)
     tenant = state.get("tenant_config", {})
-    page_access_token = tenant.get("access_token") or os.getenv("FB_PAGE_ACCESS_TOKEN")
+    page_access_token = tenant.get("access_token")
 
     if not page_access_token:
-        print("❌ [Send Message Node] Không tìm thấy Page Access Token")
-        return {"error": "Missing Page Access Token"}
+        page_id = state.get("page_id", "unknown")
+        error_msg = f"Không tìm thấy Access Token cho Page ID: {page_id}"
+        print(f"❌ [Send Message Node] {error_msg}")
+        print(f"   Vui lòng cập nhật token bằng: python python/update_token.py")
+        return {"error": error_msg}
 
     try:
         # URL của Facebook Send API

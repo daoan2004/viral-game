@@ -73,4 +73,15 @@ export class PagesService {
 
     await this.tenantRepository.delete(id);
   }
+
+  async updateToken(id: string, accessToken: string) {
+    const existing = await this.tenantRepository.findOneBy({ id });
+    if (!existing) {
+      throw new NotFoundException('Page not found');
+    }
+
+    await this.tenantRepository.update(id, { access_token: accessToken });
+    const updated = await this.tenantRepository.findOneBy({ id });
+    return { page: updated, message: 'Token updated successfully' };
+  }
 }
