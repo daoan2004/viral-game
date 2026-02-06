@@ -4,52 +4,62 @@ import os
 import datetime
 from dotenv import load_dotenv
 
-# Xác định đường dẫn gốc project (Viral game)
-# File này ở: .../Viral game/python/database.py
-# Root là: .../Viral game/
+# Load env
+load_dotenv()
+
+# ====================================================================
+# CẤU HÌNH DATABASE CHUẨN
+# ====================================================================
+# Ưu tiên lấy từ biến môi trường PYTHON_DB_PATH (được set cứng trong Docker)
+# Nếu không có (chạy local), dùng ./data/viral_game.sqlite tương đối từ root
+# ====================================================================
+
+# 1. Xác định đường dẫn file
+# Mặc định cho Local Development (nếu chạy python main.py trực tiếp ở ngoài)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_LOCAL_PATH = os.path.join(BASE_DIR, "data", "viral_game.sqlite")
 
-# Load .env từ root
-env_path = os.path.join(BASE_DIR, ".env")
-load_dotenv(env_path)
+# Lấy từ ENV (Docker sẽ truyền vào /app/data/viral_game.sqlite)
+DB_FILE = os.getenv("PYTHON_DB_PATH", DEFAULT_LOCAL_PATH)
 
-# Cấu hình đường dẫn DB
-# 1. Check for dedicated Python env var (PYTHON_DB_PATH)
-env_python_db_path = os.getenv("PYTHON_DB_PATH")
-# 2. Check for global DATABASE_PATH (only if absolute - Docker)
-env_db_path = os.getenv("DATABASE_PATH")
-
-if env_python_db_path:
-    DB_FILE = env_python_db_path
-elif env_db_path and os.path.isabs(env_db_path):
-    DB_FILE = env_db_path
-else:
-    # 3. Local fallback (same directory as this file to ensure permissions)
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    DB_FILE = os.path.join(current_dir, "viral_game.sqlite")
-
-# Ensure directory exists loop
+# 2. Đảm bảo thư mục tồn tại và có quyền ghi
 db_dir = os.path.dirname(DB_FILE)
-if db_dir and not os.path.exists(db_dir):
+if db_dir:
+    if not os.path.exists(db_dir):
+        try:
+            os.makedirs(db_dir, exist_ok=True)
+            print(f"📦 [Database] Init: Đã tạo thư mục {db_dir}")
+        except OSError as e:
+            print(f"❌ [Database] Không thể tạo thư mục {db_dir}: {e}")
+            DB_FILE = "/tmp/viral_game.sqlite"
+
+    # Robust Write Check: Thử ghi file
     try:
-        os.makedirs(db_dir)
-        print(f"📦 [Database] Created directory: {db_dir}")
-    except OSError as e:
-        print(f"⚠️ [Database] Could not create directory {db_dir}: {e}")
-        # Fallback to /tmp in worst case
+        test_file = os.path.join(db_dir if db_dir else ".", ".perm_test")
+        with open(test_file, "w") as f:
+            f.write("test")
+        os.remove(test_file)
+        print(f"✅ [Database] Kiểm tra quyền ghi OK tại: {DB_FILE}")
+    except Exception as e:
+        print(f"⚠️ [Database] Thư mục READ-ONLY hoặc lỗi quyền ({e})")
+        print(f"👉 [Database] Chuyển sang chế độ FALLBACK: /tmp/viral_game.sqlite")
         DB_FILE = "/tmp/viral_game.sqlite"
-        print(f"📦 [Database] Fallback to: {DB_FILE}")
+
+print(f"📦 [Database] Đường dẫn DB: {DB_FILE}")
 
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_FILE}"
 
-print(f"📦 [Database] Connecting to SQLite at: {DB_FILE}")
-
+# 3. Kết nối
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
+# ====================================================================
+# MODELS
+# ====================================================================
 
 class Tenant(Base):
     __tablename__ = "tenant"
@@ -58,7 +68,7 @@ class Tenant(Base):
     shop_name = Column(String)
     access_token = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
-    config = Column(JSON, nullable=True) # Stores prizes, messages, patterns
+    config = Column(JSON, nullable=True)
     
     totalSpins = Column(Integer, default=0)
     totalPrizes = Column(Integer, default=0)
@@ -70,13 +80,12 @@ class Tenant(Base):
 class Invoice(Base):
     __tablename__ = "invoice"
     
-    id = Column(String, primary_key=True, index=True) # invoice_id
+    id = Column(String, primary_key=True, index=True)
     page_id = Column(String, index=True)
     sender_id = Column(String, index=True)
     prize_won = Column(String)
     
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
-
 
 def get_db():
     db = SessionLocal()

@@ -13,13 +13,9 @@ services:
       - PORT=3000
       - APP_PORT=3000
       - CORS_ORIGINS=${CORS_ORIGINS}
-      # Point to the internal docker alias of the AI service
       - AI_SERVICE_URL=http://ai_service:8080
       - NODE_ENV=production
-      - DATABASE_PATH=/usr/src/app/data/viral_game.sqlite
-      # Facebook webhook verification (shared across all pages)
       - FB_VERIFY_TOKEN=${FB_VERIFY_TOKEN}
-      # Note: Page access tokens are stored per-page in database, not in env
     volumes:
       - viral_game_data:/usr/src/app/data
     networks:
@@ -33,22 +29,21 @@ services:
     restart: always
     ports:
       - "${PORT:-8080}:8080"
-
     environment:
-      # Override config for docker network
+      # --- CONFIG CHUẨN DATABASE ---
+      # Chỉ định chính xác vị trí file DB trong container
+      # Dùng /tmp để tránh lỗi permission trên Windows Docker
+      - PYTHON_DB_PATH=/tmp/viral_game.sqlite
+      
+      # --- OTHER CONFIGS ---
       - PORT=8080
       - HOST=0.0.0.0
-      # Force use persistent volume path in Docker (overrides .env)
-      - DATABASE_PATH=/app/data/viral_game.sqlite
-      - PYTHON_DB_PATH=/app/data/viral_game.sqlite
-      # DeepSeek API for validation
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
-      # Anthropic Proxy for OCR
       - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL}
       - ANTHROPIC_AUTH_TOKEN=${ANTHROPIC_AUTH_TOKEN}
-      # Fallback Facebook token (if not in database)
       - FB_PAGE_ACCESS_TOKEN=${FB_PAGE_ACCESS_TOKEN}
     volumes:
+      # Mount named volume vào đúng folder data đã cấp quyền
       - viral_game_data:/app/data
     networks:
       - viral_network
