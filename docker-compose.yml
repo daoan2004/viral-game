@@ -38,7 +38,9 @@ services:
       # Override config for docker network
       - PORT=8080
       - HOST=0.0.0.0
+      # Force use persistent volume path in Docker (overrides .env)
       - DATABASE_PATH=/app/data/viral_game.sqlite
+      - PYTHON_DB_PATH=/app/data/viral_game.sqlite
       # DeepSeek API for validation
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
       # Anthropic Proxy for OCR

@@ -24,8 +24,21 @@ if env_python_db_path:
 elif env_db_path and os.path.isabs(env_db_path):
     DB_FILE = env_db_path
 else:
-    # 3. Local fallback (calculated directly from project root)
-    DB_FILE = os.path.join(BASE_DIR, "data", "viral_game.sqlite")
+    # 3. Local fallback (same directory as this file to ensure permissions)
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    DB_FILE = os.path.join(current_dir, "viral_game.sqlite")
+
+# Ensure directory exists loop
+db_dir = os.path.dirname(DB_FILE)
+if db_dir and not os.path.exists(db_dir):
+    try:
+        os.makedirs(db_dir)
+        print(f"📦 [Database] Created directory: {db_dir}")
+    except OSError as e:
+        print(f"⚠️ [Database] Could not create directory {db_dir}: {e}")
+        # Fallback to /tmp in worst case
+        DB_FILE = "/tmp/viral_game.sqlite"
+        print(f"📦 [Database] Fallback to: {DB_FILE}")
 
 SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_FILE}"
 
