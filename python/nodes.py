@@ -23,21 +23,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from state import InvoiceState
 from services import TenantService, InvoiceService
 
-# ============================================================================
-# IMPORT DEPENDENCIES
-# ============================================================================
-import os
-import json
-import random
-from typing import Dict, Any
-import requests
 
-# Import LangChain components
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage
-
-from state import InvoiceState
-from services import TenantService, InvoiceService
 
 
 
@@ -128,9 +114,9 @@ def download_and_ocr_node(state: InvoiceState) -> Dict[str, Any]:
         img_base64 = base64.b64encode(img_response.content).decode('utf-8')
         
         # Initialize Client pointing to Proxy
-        # Model: deepseek-ocr (User requested)
+        # Model: gemini-3-pro-image-preview (Upgraded for better OCR)
         llm = ChatOpenAI(
-            model="deepseek-ocr",
+            model="gemini-3-pro-image-preview",
             openai_api_key=api_key,
             base_url=base_url,
             temperature=0
@@ -165,7 +151,7 @@ Yêu cầu:
         if not ocr_text or len(ocr_text) < 20:
             raise ValueError("API returned empty or invalid OCR result")
         
-        print(f"✅ [OCR Node] OCR thành công với DeepSeek-OCR (Proxy)")
+        print(f"✅ [OCR Node] OCR thành công với Gemini 3 Pro Image Preview")
         print(f"📝 [OCR Node] === RAW OCR TEXT ===")
         print(ocr_text[:500] if len(ocr_text) > 500 else ocr_text)
         print(f"📝 [OCR Node] === END OCR TEXT ===")
@@ -174,30 +160,13 @@ Yêu cầu:
         
     except Exception as e:
         # Technical error for logs
-        error_msg = f"Lỗi OCR với DeepSeek-OCR Proxy: {str(e)}"
+        error_msg = f"Lỗi OCR với Gemini 3 Pro Image Preview: {str(e)}"
         print(f"❌ [OCR Node] {error_msg}")
         
         # Friendly message for user
         friendly_msg = "Không thể đọc được ảnh hóa đơn. Bạn vui lòng chụp lại rõ nét hơn (đủ ánh sáng, không bị mờ) và gửi lại nhé!"
         return {"ocr_raw_text": None, "error": friendly_msg}
-        response = llm.invoke([message])
-        ocr_text = response.content
-        
-        # Validate response
-        if not ocr_text or len(ocr_text) < 20:
-            raise ValueError("Gemini returned empty or invalid OCR result")
-        
-        print(f"✅ [OCR Node] OCR thành công với Gemini Vision")
-        print(f"📝 [OCR Node] === RAW OCR TEXT ===")
-        print(ocr_text[:500] if len(ocr_text) > 500 else ocr_text)
-        print(f"📝 [OCR Node] === END OCR TEXT ===")
-        
-        return {"ocr_raw_text": ocr_text.strip(), "error": None}
-        
-    except Exception as e:
-        error_msg = f"Lỗi OCR với Gemini: {str(e)}"
-        print(f"❌ [OCR Node] {error_msg}")
-        return {"ocr_raw_text": None, "error": error_msg}
+
 
 
 
@@ -209,7 +178,7 @@ Yêu cầu:
 
 def validate_invoice_node(state: InvoiceState) -> Dict[str, Any]:
     """
-    Node 2: Gọi DeepSeek AI để validate hóa đơn theo patterns của tenant
+    Node 2: Gọi AI (Gemini 3 Pro) để validate hóa đơn theo patterns của tenant
 
     Args:
         state: InvoiceState chứa ocr_raw_text và tenant_config
@@ -217,7 +186,7 @@ def validate_invoice_node(state: InvoiceState) -> Dict[str, Any]:
     Returns:
         Dict với key 'validation_result' chứa kết quả từ AI
     """
-    print(f"🤖 [Validate Node] Đang gọi DeepSeek AI để validate...")
+    print(f"🤖 [Validate Node] Đang gọi Gemini 3 Pro Preview để validate...")
 
     # Kiểm tra có lỗi từ bước trước không
     if state.get("error"):
@@ -252,16 +221,22 @@ def validate_invoice_node(state: InvoiceState) -> Dict[str, Any]:
         }
 
     try:
-        # Khởi tạo DeepSeek client
-        deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
+        # Sử dụng Proxy (Anthropic Key) giống node OCR để đồng bộ
+        base_url = os.getenv("ANTHROPIC_BASE_URL")
+        api_key = os.getenv("ANTHROPIC_AUTH_TOKEN")
+        
+        if not base_url or not api_key:
+            raise ValueError("Thiếu ANTHROPIC_BASE_URL hoặc ANTHROPIC_AUTH_TOKEN")
 
-        if not deepseek_api_key:
-            raise ValueError("DEEPSEEK_API_KEY không được cấu hình")
+        # Ensure base_url ends with /v1
+        if not base_url.endswith("/v1"):
+            base_url = f"{base_url.rstrip('/')}/v1"
 
+        # Model: gemini-3-pro-preview (Mô hình mạnh nhất, logic cực tốt)
         llm = ChatOpenAI(
-            model="deepseek-chat",
-            api_key=deepseek_api_key,
-            base_url="https://api.deepseek.com",
+            model="gemini-3-pro-preview",
+            openai_api_key=api_key,
+            base_url=base_url,
             temperature=0.1,
         )
 
@@ -279,53 +254,51 @@ NHIỆM VỤ:
    
    **TÊN CẦN TÌM:** {patterns_str}
    
-   **QUY TẮC NHẬN DIỆN LINH HOẠT - ĐỌC KỸ:**
+   **QUAN TRỌNG - QUY TRÌNH SO SÁNH TỪNG BƯỚC:**
    
-   A. TIỀN TỐ/HẬU TỐ (bỏ qua khi so sánh):
-      - Tiền tố: "NHÀ HÀNG", "QUÁN", "CỬA HÀNG", "TIỆM", "SHOP", "RESTAURANT", "CAFE", "COFFEE"
-      - Hậu tố: "STORE", "HOUSE", "KITCHEN", "BISTRO"
-      - VD: "NHÀ HÀNG EM AN TINH NGHỊCH" = "Em An Tinh Nghịch" [CHẤP NHẬN]
+   Bước 1: Tìm tên quán trong 3 dòng đầu của hóa đơn
+   Bước 2: Chuẩn hóa tên tìm được:
+      - Chuyển tất cả về LOWERCASE
+      - Loại bỏ tiền tố: "nhà hàng", "quán", "cửa hàng", "tiệm", "shop", "restaurant", "cafe", "coffee"
+      - Loại bỏ hậu tố: "store", "house", "kitchen", "bistro"
+      - Loại bỏ ký tự đặc biệt: dấu chấm, dấu phẩy, dấu gạch ngang
+      - Loại bỏ khoảng trắng thừa
    
-   B. LỖI OCR THƯỜNG GẶP (chấp nhận):
-      - Dấu thanh: "Tinh" <-> "Tĩnh" <-> "Tịnh" <-> "Tính"
-      - Thiếu dấu: "Nghịch" <-> "Nghich" <-> "Nghịch"
-      - Chữ i/l: "Tinh" <-> "Tlnh"
-      - Chữ o/0: "Soma" <-> "S0ma"
-      - Khoảng trắng: "EmAn" <-> "Em An"
+   Bước 3: Chuẩn hóa tên cần tìm (pattern) theo cách tương tự
    
-   C. VIẾT HOA/THƯỜNG (bỏ qua):
-      - "em an tinh nghịch" = "EM AN TINH NGHỊCH" = "Em An Tinh Nghịch" [CHẤP NHẬN]
+   Bước 4: So sánh 2 chuỗi đã chuẩn hóa
+      - Nếu giống nhau HOÀN TOÀN -> valid: true
+      - Nếu độ tương đồng >= 70% -> valid: true
+      - Nếu khác nhau hoàn toàn -> valid: false
    
-   D. KÝ TỰ ĐẶC BIỆT (bỏ qua):
-      - Dấu gạch ngang, dấu chấm, dấu phẩy
-      - "Em-An" = "Em.An" = "Em An" [CHẤP NHẬN]
+   **VÍ DỤ CỤ THỂ:**
    
-   E. FUZZY MATCHING (độ tương đồng >= 70%):
-      - Nếu tên có 3+ từ, cho phép 1 từ sai/thiếu
-      - VD: "Em An Nghịch" (thiếu "Tinh") vẫn chấp nhận nếu độ tương đồng cao
+   Pattern cần tìm: "Em An Tinh Nghịch"
+   Sau chuẩn hóa: "em an tinh nghịch"
    
-   F. VỊ TRÍ TÌM KIẾM:
-      - Ưu tiên: 3 dòng đầu tiên của hóa đơn
-      - Backup: Toàn bộ văn bản nếu không tìm thấy ở đầu
+   Trường hợp 1: Tìm thấy "NHÀ HÀNG EM AN TINH NGHỊCH"
+   - Chuyển lowercase: "nhà hàng em an tinh nghịch"
+   - Loại bỏ tiền tố "nhà hàng": "em an tinh nghịch"
+   - So sánh: "em an tinh nghịch" == "em an tinh nghịch"
+   - KẾT QUẢ: valid = true [CHẤP NHẬN]
    
-   **CÁCH SO SÁNH:**
-   1. Loại bỏ tiền tố/hậu tố phổ biến
-   2. Chuẩn hóa: lowercase, bỏ dấu, bỏ ký tự đặc biệt
-   3. So sánh chuỗi đã chuẩn hóa
-   4. Nếu khớp >= 70% -> valid: true
+   Trường hợp 2: Tìm thấy "QUÁN EM AN TĨNH NGHỊCH"
+   - Chuyển lowercase: "quán em an tĩnh nghịch"
+   - Loại bỏ tiền tố "quán": "em an tĩnh nghịch"
+   - So sánh với "em an tinh nghịch" (dấu khác nhau nhưng tương đồng cao)
+   - KẾT QUẢ: valid = true [CHẤP NHẬN]
    
-   **VÍ DỤ CHẤP NHẬN (với pattern "Em An Tinh Nghịch"):**
-   [OK] "NHÀ HÀNG EM AN TINH NGHỊCH"
-   [OK] "QUÁN EM AN TĨNH NGHỊCH" (lỗi dấu)
-   [OK] "Em An Tinh Nghich" (thiếu dấu)
-   [OK] "EMAN TINH NGHỊCH" (thiếu space)
-   [OK] "Em.An.Tinh.Nghịch"
-   [OK] "em an tinh nghịch" (lowercase)
-   [OK] "Nhà hàng Em An Nghịch" (thiếu "Tinh" nhưng độ tương đồng cao)
+   Trường hợp 3: Tìm thấy "Nhà hàng Soma Tea"
+   - Chuyển lowercase: "nhà hàng soma tea"
+   - Loại bỏ tiền tố: "soma tea"
+   - So sánh với "em an tinh nghịch" (khác hoàn toàn)
+   - KẾT QUẢ: valid = false [TỪ CHỐI]
    
-   **VÍ DỤ TỪ CHỐI:**
-   [REJECT] "Nhà hàng Soma Tea" (tên khác hoàn toàn)
-   [REJECT] "Quán Ăn Ngon" (không liên quan)
+   **LƯU Ý QUAN TRỌNG:**
+   - VIẾT HOA/THƯỜNG KHÔNG QUAN TRỌNG - luôn chuyển về lowercase trước khi so sánh
+   - Dấu thanh có thể sai do OCR - chấp nhận nếu tương đồng >= 70%
+   - PHẢI loại bỏ tiền tố/hậu tố trước khi so sánh
+   - Nếu không chắc chắn, ưu tiên CHẤP NHẬN nếu độ tương đồng >= 70%
 
 2. TRÍCH XUẤT MÃ HÓA ĐƠN:
    - Tìm số hóa đơn/mã đơn hàng trong text
@@ -334,10 +307,11 @@ NHIỆM VỤ:
    - VD: "26/01/2026 19:45" + "45.360đ" -> "260126-1945-45K"
 
 3. QUY TẮC OUTPUT:
-   - valid = true: Khi tên quán khớp theo quy tắc trên (>= 70% tương đồng)
+   - valid = true: Khi tên quán khớp theo quy trình trên (>= 70% tương đồng)
    - valid = false: Khi tên quán khác hoàn toàn (< 70% tương đồng)
    - invoice_id: Bắt buộc có nếu valid=true
    - shop_name: Tên đầy đủ phát hiện được (bao gồm tiền tố nếu có)
+   - reason: Giải thích rõ ràng lý do chấp nhận/từ chối
 
 QUAN TRỌNG: Chỉ trả về JSON thuần, không markdown, không giải thích.
 
@@ -401,7 +375,7 @@ OUTPUT FORMAT:
         }
     except Exception as e:
         # Technical error for logs
-        error_msg = f"Lỗi khi gọi DeepSeek API: {str(e)}"
+        error_msg = f"Lỗi khi gọi AI Provider: {str(e)}"
         print(f"❌ [Validate Node] {error_msg}")
         
         # Friendly message
