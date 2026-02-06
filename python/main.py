@@ -44,14 +44,11 @@ app = FastAPI(
 FB_VERIFY_TOKEN = os.getenv("FB_VERIFY_TOKEN")
 
 
-async def process_invoice_async(sender_id: str, page_id: str, image_url: str):
+def process_invoice_async(sender_id: str, page_id: str, image_url: str):
     """
-    Hàm xử lý invoice trong background task
-
-    Args:
-        sender_id: Facebook User ID
-        page_id: Facebook Page ID (để xác định tenant)
-        image_url: URL của ảnh hóa đơn
+    Hàm xử lý invoice trong background task.
+    LƯU Ý: Dùng def thường (không async) để FastAPI chạy trong ThreadPool,
+    tránh block event loop vì app_graph.invoke là blocking.
     """
     print(f"\n{'=' * 60}")
     print(f"🚀 [Background Task] Bắt đầu xử lý invoice")
@@ -81,7 +78,9 @@ async def process_invoice_async(sender_id: str, page_id: str, image_url: str):
 
     except Exception as e:
         print(f"\n{'=' * 60}")
-        print(f"❌ [Background Task] Lỗi khi xử lý: {str(e)}")
+        print(f"❌ [Background Task] Lỗi CRITICAL khi xử lý: {str(e)}")
+        import traceback
+        traceback.print_exc()
         print(f"{'=' * 60}\n")
 
 
