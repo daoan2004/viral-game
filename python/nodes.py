@@ -51,8 +51,8 @@ def load_tenant_node(state: InvoiceState) -> Dict[str, Any]:
             "error": "Không xác định được Page ID"
         }
     
-    # Load tenant từ Firebase
-    tenant_config = TenantService.get_tenant_by_page_id(page_id)
+    # Load tenant từ Firebase (hoặc tạo mới nếu chưa có)
+    tenant_config = TenantService.get_or_create_tenant(page_id)
     
     if not tenant_config:
         return {
@@ -408,7 +408,7 @@ def lucky_draw_node(state: InvoiceState) -> Dict[str, Any]:
     print(f"🎰 [Lucky Draw Node] Đang xử lý quay thưởng...")
 
     validation_result = state.get("validation_result", {})
-    tenant = state.get("tenant_config", {})
+    tenant = state.get("tenant_config") or {}
     
     shop_name = tenant.get("shop_name", "Cửa hàng")
     page_id = state.get("page_id", "")

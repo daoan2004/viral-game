@@ -8,28 +8,14 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 2. Setup User & Permissions (CRITICAL STEP)
-# Tạo user non-root
-RUN useradd -m myuser
-
-# Tạo folder data EXPLICITLY
-RUN mkdir -p /app/data
-
-# Copy code
+# 2. Copy code (Running as ROOT by default to fix Windows Volume Permissions)
 COPY . .
 
-# Chuyển quyền sở hữu toàn bộ /app cho myuser
-# Điều này đảm bảo myuser có thể ghi vào /app/data
-RUN chown -R myuser:myuser /app
+# Create data dir just in case
+RUN mkdir -p /app/data
 
-# Khai báo Volume (Optional nhưng tốt cho documentation)
-VOLUME ["/app/data"]
-
-# 3. Switch User
-USER myuser
-
-# Expose port
+# Expose port (default 8080)
 EXPOSE 8080
 
-# Run
+# Command to run production server
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]

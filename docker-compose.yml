@@ -32,8 +32,8 @@ services:
     environment:
       # --- CONFIG CHUẨN DATABASE ---
       # Chỉ định chính xác vị trí file DB trong container
-      # Dùng /tmp để tránh lỗi permission trên Windows Docker
-      - PYTHON_DB_PATH=/tmp/viral_game.sqlite
+      # Dùng Shared Volume để Frontend (App) có thể đọc được data
+      - PYTHON_DB_PATH=/app/data/viral_game.sqlite
       
       # --- OTHER CONFIGS ---
       - PORT=8080

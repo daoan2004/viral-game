@@ -29,6 +29,60 @@ class TenantService:
             db.close()
 
     @staticmethod
+    def get_or_create_tenant(page_id: str):
+        """Tự động tạo tenant mặc định nếu chưa có (cho mục đích test)"""
+        db = SessionLocal()
+        try:
+            tenant = db.query(Tenant).filter(Tenant.id == page_id).first()
+            if not tenant:
+                # Create Default Tenant
+                print(f"⚠️ [TenantService] Page {page_id} chưa có config. Đang tạo Default...")
+                default_config = {
+                    "prizes": [
+                        {"name": "Voucher 10k", "rate": 0.5},
+                        {"name": "Voucher 20k", "rate": 0.3},
+                        {"name": "Voucher 50k", "rate": 0.2},
+                    ],
+                    "messages": {
+                        "welcome": "Chào {name}! Gửi ảnh hóa đơn để quay thưởng nhé.",
+                        "invalid": "Hóa đơn không hợp lệ.",
+                        "used": "Hóa đơn này đã được sử dụng rồi.",
+                        "success": "Chúc mừng! Bạn trúng {prize}."
+                    },
+                    "shop_patterns": ["WinMart", "Circle K", "FamilyMart", "7-Eleven"]
+                }
+                
+                tenant = Tenant(
+                    id=page_id,
+                    shop_name=f"Shop Demo {page_id[-4:]}",
+                    is_active=True,
+                    config=default_config,
+                    created_at=datetime.utcnow()
+                )
+                db.add(tenant)
+                db.commit()
+                db.refresh(tenant)
+                print(f"✅ [TenantService] Đã tạo Default Tenant cho Page {page_id}")
+
+            # Return as dict
+            tenant_dict = {
+                "id": tenant.id,
+                "shop_name": tenant.shop_name,
+                "access_token": tenant.access_token,
+                "is_active": tenant.is_active,
+                "prizes": tenant.config.get("prizes", []) if tenant.config else [],
+                "messages": tenant.config.get("messages", {}) if tenant.config else {},
+                "shop_patterns": tenant.config.get("shop_patterns", []) if tenant.config else [],
+            }
+            return tenant_dict
+        except Exception as e:
+            print(f"Error creating tenant: {e}")
+            db.rollback()
+            return None
+        finally:
+            db.close()
+
+    @staticmethod
     def update_token(page_id: str, new_token: str) -> bool:
         db = SessionLocal()
         try:
