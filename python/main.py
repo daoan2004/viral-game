@@ -23,6 +23,16 @@ from state import InvoiceState
 load_dotenv(dotenv_path="../.env")
 load_dotenv()  # Also try current directory as fallback
 
+# Import Database to retry creation
+from database import Base, engine
+# Create tables if not exist
+Base.metadata.create_all(bind=engine)
+
+# Deduplication Cache (Simple in-memory)
+# Format: {message_id: timestamp}
+PROCESSED_MESSAGES = {}
+import time
+
 # Khởi tạo FastAPI app
 app = FastAPI(
     title="Facebook Messenger Invoice Bot (Multi-tenant)",
@@ -162,7 +172,28 @@ async def receive_message(request: Request, background_tasks: BackgroundTasks):
 
                 # Get message
                 message = messaging_event.get("message", {})
+                message_id = message.get("mid")
                 
+                # ========================================================
+                # 1. DEDUPLICATION CHECK (Chống spam/retry)
+                # ========================================================
+                if message_id:
+                    current_time = time.time()
+                    
+                    # Clean old cache (keep only last 10 mins)
+                    # (Simple cleanup to avoid memory leak)
+                    if len(PROCESSED_MESSAGES) > 1000:
+                         keys_to_remove = [k for k, v in PROCESSED_MESSAGES.items() if current_time - v > 600]
+                         for k in keys_to_remove:
+                             del PROCESSED_MESSAGES[k]
+
+                    if message_id in PROCESSED_MESSAGES:
+                        print(f"  ⏭️  Bỏ qua Duplicate Message ID: {message_id}")
+                        continue
+                    
+                    # Mark as processed
+                    PROCESSED_MESSAGES[message_id] = current_time
+
                 # ⚠️ QUAN TRỌNG: Bỏ qua tin nhắn echo (từ chính bot gửi đi)
                 # Nếu không check này, bot sẽ xử lý lại tin nhắn của chính nó → vòng lặp vô hạn!
                 if message.get("is_echo"):
